@@ -17,12 +17,35 @@ export {asyncHandler};
 // });
 
 
+// HOF
+// the function that is declared outside is written inside the function call in the above code 
+
+// // A simple function that doubles a number
+// const double = (n) => n * 2;
+
+// // Higher-order function: takes a function, returns a new function
+// const addOne = (fn) => {
+//   return (x) => fn(x) + 1;
+// };
+
+// // Wrap double with addOne
+// const doubleThenAddOne = addOne(double);
+
+// // Use it
+// console.log(doubleThenAddOne(5)); // 11
+// // Explanation: double(5) = 10 → +1 = 11
 
 
 
 
+// Suppose User.find() succeeds or returns null/empty.
+// Here you throw a new error.
+// In async functions, throw automatically rejects the promise.
+// Promise.resolve(requestHandler(...)) wraps your async function.
 
+// Since the promise is rejected (because of the throw), .catch(error) executes.
 
+// Inside .catch, it calls next(error).
 
 
 
