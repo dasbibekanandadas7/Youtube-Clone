@@ -57,21 +57,23 @@ const registerUser=asyncHandler(async (req,res) =>{
   //avatar is the name of the field, [0] will give the first file under the name, path will give the url/path of the uploaded file.
   const avatarLocalPath= req.files?.avatar[0]?.path;
   // const coverimageLocalPath=req.files?.coverimage[0]?.path;
+  //if there is no coverimage provided, wheather we pass the value or totally avaoiding passing of coverimage, there will be no
+  //coverimage array.  Hence it will show error in undefined [0];
   
   let coverimageLocalPath;
   if(req.files && Array.isArray(req.files.coverimage) && req.files.coverimage.length>0){
     coverimageLocalPath=req.files.coverimage[0].path;
   }
 
+  
   if(!avatarLocalPath){
     throw new apiError(400, "Avatar file is required")
-  }
-
-  
+  } 
    
   const avatar=await uploadOnCloudinary(avatarLocalPath);
   const coverimage=await uploadOnCloudinary(coverimageLocalPath);
-  
+
+
   if(!avatar){
     throw new apiError(400, "Avatar file is not uploaded");
   }
@@ -149,10 +151,10 @@ const loginUser=asyncHandler(async(req, res)=>{
 
   return res.status(200)
   .cookie("accessToken", accessToken, options)
-  .cookie("refreshToken", refreshToken, options).
-  json(
+  .cookie("refreshToken", refreshToken, options)
+  .json(
     new apiResponse(200,{
-      user: loggedInUser,accessToken,refreshToken // suppose user want to save the accessToken and refreshToken somewhere
+      user: loggedInUser,accessToken // suppose user want to save the accessToken and refreshToken somewhere
     },
     "User Logged in successfully"
     )
