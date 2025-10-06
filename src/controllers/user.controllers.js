@@ -4,6 +4,25 @@ import {User} from "../models/user.models.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiresponse.js";
 
+const generateAccessAndRefreshTokens=async(userId)=>{
+  try {
+    const user= await User.findById(userId);
+    const accessToken= user.generateAccessToken();
+    const refreshToken=user.generateRefreshToken();
+
+    user.refreshToken= refreshToken;
+    await user.save({validationBeforeSave: false}); //save method is provided by mongoDB
+    // when the refreshToken is saved, the mongoose values (usename, password, email etc (required fields) get activated and 
+    // ask for validation (basically it runs again and ask for values to save agin). But as we have not given any other value in
+    //  the save. it may cause error here. so we give validationBeforeSave: false; it means don't validate anything just save.
+    
+    return {accessToken, refreshToken};
+
+  } catch (error) {
+    throw new apiError(500, "Something went wrong while generating token")
+  }
+}
+
 const registerUser=asyncHandler(async (req,res) =>{
     // get user details from frontend
     //validation - not empty
@@ -17,7 +36,7 @@ const registerUser=asyncHandler(async (req,res) =>{
 
     const {fullname, username, email, password} = req.body;  
     if(
-        [fullname,username,email,password].some((field)=> field?.trim==="")
+        [fullname,username,email,password].some((field)=> field?.trim()==="")
     ){
         throw new apiError(400, "All fields are required");
     }
@@ -27,7 +46,7 @@ const registerUser=asyncHandler(async (req,res) =>{
     // } possible way for customized logic
 
     
-   const existed_user=User.findOne({
+   const existed_user=await User.findOne({
     $or:[{username},{email}]
    });
    if(existed_user){
@@ -37,19 +56,24 @@ const registerUser=asyncHandler(async (req,res) =>{
   // better to use optional field of multer file upload. because sometimes the multer may give error. 
   //avatar is the name of the field, [0] will give the first file under the name, path will give the url/path of the uploaded file.
   const avatarLocalPath= req.files?.avatar[0]?.path;
-  const coverimageLocalPath=req.files?.coverimage[0]?.path;
+  // const coverimageLocalPath=req.files?.coverimage[0]?.path;
+  
+  let coverimageLocalPath;
+  if(req.files && Array.isArray(req.files.coverimage) && req.files.coverimage.length>0){
+    coverimageLocalPath=req.files.coverimage[0].path;
+  }
 
   if(!avatarLocalPath){
     throw new apiError(400, "Avatar file is required")
   }
 
-
+  
+   
   const avatar=await uploadOnCloudinary(avatarLocalPath);
   const coverimage=await uploadOnCloudinary(coverimageLocalPath);
-
-
+  
   if(!avatar){
-    throw new apiError(400, "Avatar file is required");
+    throw new apiError(400, "Avatar file is not uploaded");
   }
 
   const user= await User.create({
@@ -78,4 +102,92 @@ const registerUser=asyncHandler(async (req,res) =>{
 
 })
 
-export {registerUser};
+//auth middleware. custom middleware created by us. it only verify is user exist or not
+
+const loginUser=asyncHandler(async(req, res)=>{
+   //data from req body
+   //username or email given by user or not
+   //find the user
+   //check password
+   //access and refresh token created
+   //send cookie
+   //send response
+
+
+   const {email, username, password}=req.body;
+
+   if(!username || !email){
+    throw new apiError(400, "username or email is required");
+   }
+
+   //check if either email or username is provided ($or is provided by mongoose)
+   //findOne-> if any of the value is found, it returns the object validated
+   const user= await User.findOne({
+    $or:[{username},{email}]
+  })
+
+  if(!user){
+   throw new apiError(404, "user doesn't exist");
+  }
+
+  const isPasswordValid=await user.isPasswordCorrect(password);
+  if(!isPasswordValid){
+   throw new apiError(401, "Incorrect Password");
+  }
+
+  //access and refresh token generation is a recurring process. it is done many times in the project. So we created a 
+  //method to use it again and again
+  
+  const{accessToken, refreshToken}=await generateAccessAndRefreshTokens(user._id);
+   
+  const loggedInUser=await User.findById(user._id).select("-password refreshToken");
+
+  const options={
+    httpOnly: true,
+    secure: true
+  }
+
+  return res.status(200)
+  .cookie("accessToken", accessToken, options)
+  .cookie("refreshToken", refreshToken, options).
+  json(
+    new apiResponse(200,{
+      user: loggedInUser,accessToken,refreshToken // suppose user want to save the accessToken and refreshToken somewhere
+    },
+    "User Logged in successfully"
+    )
+  )
+
+})
+
+const logoutUser=asyncHandler(async(req, res)=>{
+  //remove accessToken and refreshToken
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set:{
+        refreshToken: undefined
+      }
+    },
+    {
+      new: true
+    }
+  )
+
+  const options={
+    httpOnly: true,
+    secure: true
+  }
+   
+  return res
+  .status(200)
+  .clearCookie("accessToken", options)
+  .clearCookie("refresh_token", options)
+  .json( new apiResponse(200,{}, "User Logged out Successfully"))
+})
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser
+};
