@@ -299,6 +299,8 @@ const updateUserAvatar=asyncHandler(async(req,res)=>{
       new: true
      }
   ).select("-password -refreshToken");
+  //when we update something, the new:true will return the updated document. In mongoose it is designed to give the whole
+  //new document without excluding anything even if we have excluded some features before. So we again use select to exclude.
 
   return res.status(200)
   .json(new apiResponse(200,user, "Avatar updated Successfully"));
@@ -327,6 +329,8 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
   return res.status(200)
   .json(new apiResponse(200,user, "CoverImage updated Successfully"));
 });
+
+
 
 
 export {
