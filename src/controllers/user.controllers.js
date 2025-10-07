@@ -4,7 +4,6 @@ import {User} from "../models/user.models.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiresponse.js";
 import jwt from "jsonwebtoken";
-import {verifyJWT} from "../middleware/auth.middleware.js";
 
 const generateAccessAndRefreshTokens=async(userId)=>{
   try {
@@ -150,13 +149,12 @@ const loginUser=asyncHandler(async(req, res)=>{
   const options={
     httpOnly: true,
     secure: true
-  }
-  
+  } 
 
 
   return res.status(200)
   .cookie("accessToken", accessToken, options)
-  .cookie("refreshToken", refreshToken, options)
+  .cookie("refreshToken", "", options)
   .json(
     new apiResponse(200,{
       user: loggedInUser,accessToken // suppose user want to save the accessToken and refreshToken somewhere
@@ -209,6 +207,7 @@ const refreshAccessToken=asyncHandler(async(req,res)=>{
     throw new apiError(401, "Invalid refresh Token");
     }
 
+    // incoming refresh token is the one provied with user request (POSTMAN), user.refreshToken is the one saved in DB.
   if(incomingRefreshToken!==user?.refreshToken){
     throw new apiError(401, "Refresh token is expired or used");
   }
