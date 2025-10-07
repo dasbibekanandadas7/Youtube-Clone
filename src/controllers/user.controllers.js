@@ -154,7 +154,7 @@ const loginUser=asyncHandler(async(req, res)=>{
 
   return res.status(200)
   .cookie("accessToken", accessToken, options)
-  .cookie("refreshToken", "", options)
+  .cookie("refreshToken", refreshToken, options)
   .json(
     new apiResponse(200,{
       user: loggedInUser,accessToken // suppose user want to save the accessToken and refreshToken somewhere
