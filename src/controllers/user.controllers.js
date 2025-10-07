@@ -3,19 +3,23 @@ import { apiError } from "../utils/apierror.js";
 import {User} from "../models/user.models.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiresponse.js";
+import jwt from "jsonwebtoken";
+import {verifyJWT} from "../middleware/auth.middleware.js";
 
 const generateAccessAndRefreshTokens=async(userId)=>{
   try {
+    
     const user= await User.findById(userId);
     const accessToken= user.generateAccessToken();
     const refreshToken=user.generateRefreshToken();
 
+
     user.refreshToken= refreshToken;
-    await user.save({validationBeforeSave: false}); //save method is provided by mongoDB
+    await user.save({validateBeforeSave: false}); //save method is provided by mongoose
+
     // when the refreshToken is saved, the mongoose values (usename, password, email etc (required fields) get activated and 
     // ask for validation (basically it runs again and ask for values to save agin). But as we have not given any other value in
     //  the save. it may cause error here. so we give validationBeforeSave: false; it means don't validate anything just save.
-    
     return {accessToken, refreshToken};
 
   } catch (error) {
@@ -115,10 +119,9 @@ const loginUser=asyncHandler(async(req, res)=>{
    //send cookie
    //send response
 
-
    const {email, username, password}=req.body;
 
-   if(!username || !email){
+   if(!username && !email){
     throw new apiError(400, "username or email is required");
    }
 
@@ -142,12 +145,14 @@ const loginUser=asyncHandler(async(req, res)=>{
   
   const{accessToken, refreshToken}=await generateAccessAndRefreshTokens(user._id);
    
-  const loggedInUser=await User.findById(user._id).select("-password refreshToken");
+  const loggedInUser=await User.findById(user._id).select("-password -refreshToken"); 
 
   const options={
     httpOnly: true,
     secure: true
   }
+  
+
 
   return res.status(200)
   .cookie("accessToken", accessToken, options)
@@ -164,6 +169,8 @@ const loginUser=asyncHandler(async(req, res)=>{
 
 const logoutUser=asyncHandler(async(req, res)=>{
   //remove accessToken and refreshToken
+  //the req is coming from the usermiddleware->verifyjwt function, here the req..user is added in the req by function JWTverify.
+  // req is having _id, bcz in refreshToken we have given parameter _id only. that will be created by mongoDB.
   await User.findByIdAndUpdate(
     req.user._id,
     {
@@ -188,8 +195,51 @@ const logoutUser=asyncHandler(async(req, res)=>{
   .json( new apiResponse(200,{}, "User Logged out Successfully"))
 })
 
+const refreshAccessToken=asyncHandler(async(req,res)=>{
+  const incomingRefreshToken=req.cookies.refreshToken || req.body.refreshToken;
+  if(!incomingRefreshToken){
+    throw new apiError(401,"Unauthorized request");
+  }
+
+  try{
+    const decodedToken= jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const user=await User.findById(decodedToken?._id);
+
+    if(!user){
+    throw new apiError(401, "Invalid refresh Token");
+    }
+
+  if(incomingRefreshToken!==user?.refreshToken){
+    throw new apiError(401, "Refresh token is expired or used");
+  }
+  //the user here is coming from "generateAccessAndRefreshTokens" function. we have saved refreshToken value in the 
+  // user.refreshToken, here we got user from "User.findById(decodedToken?._id)". We checked this user.refreshToken with 
+  //new refreshToken provided. If check is true then we created newrefreshToken and accessToken.
+
+
+  const options={
+    httpOnly: true,
+    secure: true
+  }
+
+  const{accessToken, newrefreshToken}=await generateAccessAndRefreshTokens(user._id);
+  return res.status(200)
+  .cookie("accessToken", accessToken)
+  .cookie("refreshToken", newrefreshToken)
+  .json(
+    new apiResponse(200, {
+      accessToken
+    },"Access Token Refreshed")
+  )
+  }
+  catch(error){
+     throw new apiError(401, error?.message||"invalid refresh token")
+  }
+})
+
 export {
   registerUser,
   loginUser,
-  logoutUser
+  logoutUser,
+  refreshAccessToken
 };

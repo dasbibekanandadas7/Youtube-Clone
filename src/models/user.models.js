@@ -55,6 +55,8 @@ userschema.pre("save", async function(next){
    next();
 })
 // functionality used is save. it means, just befroe the save, we will do this function.
+
+
 //can not use arrow function for callback. reason: in arrow function, the funciton does not know the context of 'this'. Hence 
 //it may get problematic to capture for what the functionality is working.(Ex: the values supposed to be stored in DB); 
 
@@ -72,7 +74,7 @@ userschema.methods.generateAccessToken=function(){
     },
     process.env.ACCESS_TOKEN_SECRET,
     {
-        expiresIn:ACCESS_TOKEN_EXPIRY
+        expiresIn:process.env.ACCESS_TOKEN_EXPIRY
     }
    )
 }
@@ -83,7 +85,7 @@ userschema.methods.generateRefreshToken=function(){
     },
     process.env.REFRESH_TOKEN_SECRET,
     {
-        expiresIn:REFRESH_TOKEN_EXPIRY
+        expiresIn:process.env.REFRESH_TOKEN_EXPIRY
     }
    )
 }

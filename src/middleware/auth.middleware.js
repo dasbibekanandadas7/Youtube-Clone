@@ -6,7 +6,7 @@ import { User } from "../models/user.models.js";
 export const verifyJWT=asyncHandler(async(req, _, next)=>{
   try {
      const token=req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
-     // somethimes user want to create token by himself. It is stored inside header. So we can pull the token from there
+     // sometimes user want to create token by himself. It is stored inside header. So we can pull the token from there
   
      if(!token){
       throw new apiError(401, "Unauthorized request");
@@ -16,11 +16,12 @@ export const verifyJWT=asyncHandler(async(req, _, next)=>{
      const user= await User.findById(decodedToken?._id).select("-password -refreshToken");
   
      if(!user){
-      //about frontend
+      
       throw new apiError(401, "Invalid Access Token");
      }
-  
+   
      req.user=user;
+     // a new key value pair added in the request object. we can access anything using req.user.
      next();
   } catch (error) {
     throw new apiError(401, error?.message|| "Invalid access token");
