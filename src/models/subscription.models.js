@@ -2,11 +2,11 @@ import mongoose, {Schema} from "mongoose";
 
 const subscriptionSchema=new Schema({
   subscriber:{
-    type:Schema.Types.ObjectId, // the user who subscribed my channel
+    type:Schema.Types.ObjectId, // one who is subscribing
     ref:"User"
   },
   channel:{
-    type:Schema.Types.ObjectId, // the channels I have subscribed to
+    type:Schema.Types.ObjectId,  //one to whom 'subscriber' is subscribing
     ref: "User"
   }
 },{timestamps:true});

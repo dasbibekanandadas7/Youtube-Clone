@@ -333,14 +333,18 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
 
 const getUserChannelProfile=asyncHandler(async(req, res)=>{
    const {username}=req.params;
-   if(!username.trim()){
+   if(!username?.trim()){
     throw new apiError(400, "username is required");
    }
 
-  //  User.findOne({username}); possible way
+  //  User.findOne({username}); one possible way to get the user
+
+  //otherwise it is better way
   const channel= await User.aggregate([
     {
-      $match:{username:username?.toLowerCase()}
+      $match: username
+      ? { username: new RegExp(`^${username}$`, "i") } // match entire string, ignore case
+      : {} // if username not provided, match all users (empty filter) nothing will be matched
     },
     {
       $lookup:{
@@ -372,6 +376,7 @@ const getUserChannelProfile=asyncHandler(async(req, res)=>{
               else: false
           }
         }
+        //This checks: “Is the currently logged-in user in the list of subscribers for this channel?”
       }
     },{
       $project:{
@@ -386,6 +391,9 @@ const getUserChannelProfile=asyncHandler(async(req, res)=>{
       }
     }
   ])
+  // $project in MongoDB aggregation controls which fields are included in the output.
+  //Keep fields (1 = include) .Exclude fields (0 = exclude)
+  //$project determines what fields are sent to the client.
 
   if(!channel?.length){
    throw new apiError(404, "Channel doesn't exist");
@@ -394,6 +402,15 @@ const getUserChannelProfile=asyncHandler(async(req, res)=>{
   return res
   .status(200)
   .json(new apiResponse(200,channel[0],"user channel fetched Successfully"));
+  //channel[0] gives the first object of the array. as we checking one username. if we add extra username in params or manually 
+  //in code, it will give the both objects of the array with channel instaed of channel[0].
+  // const extraUsername = "Alice";
+  // const channels = await User.aggregate([
+  //   {
+  //     $match: {
+  //       username: { $in: [username, extraUsername] } // match both usernames
+  //     }
+  //   },
 
 })
 
@@ -410,4 +427,5 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserChannelProfile
 };
