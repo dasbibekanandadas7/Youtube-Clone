@@ -172,8 +172,11 @@ const logoutUser=asyncHandler(async(req, res)=>{
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set:{
-        refreshToken: undefined
+      // $set:{
+      //   refreshToken: null// undefined wont work
+      // }
+      $unset:{
+        refreshToken: 1
       }
     },
     {
@@ -415,7 +418,55 @@ const getUserChannelProfile=asyncHandler(async(req, res)=>{
 });
 
 const getWatchHistory=asyncHandler(async(req,res)=>{
-  
+  const user=await User.aggregate([
+    {
+      $match:{
+        _id: new mongoose.Types.ObjectId(req.user._id)
+      }
+    },{
+       $lookup:{
+        from:"videos",
+        localField:"watchhistory",
+        foreignField:"_id",
+        as:"watchhistory",
+        pipeline:[
+          {
+            $lookup:{
+              from:"users",
+              localField:"owner",
+              foreignField:"_id",
+              as:"owner",
+              pipeline:[
+                {
+                  $project:{
+                    fullname:1,
+                    username:1,
+
+                  }
+                }
+              ]
+            }
+          },{
+            $addFields:{
+              owner:{
+                $first:"$owner"
+              }
+            }
+          }
+        ]
+       }
+    }
+    //it looks for the videos._id=user.watchhistory(array of videosID). it stores the video.ids  in the watchhistory
+    //array of user model. and it gives the array of objects having key=watchHistory and values as array of video objects
+    //we can include the video id in the watchhsitory when we craete the video model, when someone watches the video it 
+    //adds the video id in the user model watchhistory array.
+
+    //need to apply nested pipeline as owner of the video is a user. we need to get the owner details also
+     
+  ])
+
+  return res.status(200)
+  .json(new apiResponse(200,user[0].watchhistory, "Watch history fetched Successfully"))
 });
 
 
