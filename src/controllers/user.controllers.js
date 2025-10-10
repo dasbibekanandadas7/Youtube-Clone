@@ -412,9 +412,11 @@ const getUserChannelProfile=asyncHandler(async(req, res)=>{
   //     }
   //   },
 
-})
+});
 
-
+const getWatchHistory=asyncHandler(async(req,res)=>{
+  
+});
 
 
 export {
@@ -427,5 +429,6 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
-  getUserChannelProfile
+  getUserChannelProfile,
+  getWatchHistory
 };
