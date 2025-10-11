@@ -4,6 +4,7 @@ import {User} from "../models/user.models.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiresponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshTokens=async(userId)=>{
   try {
@@ -19,7 +20,9 @@ const generateAccessAndRefreshTokens=async(userId)=>{
     // when the refreshToken is saved, the mongoose values (usename, password, email etc (required fields) get activated and 
     // ask for validation (basically it runs again and ask for values to save agin). But as we have not given any other value in
     //  the save. it may cause error here. so we give validationBeforeSave: false; it means don't validate anything just save.
-    return {accessToken, refreshToken};
+    
+    return {accessToken, refreshToken}; // the destructing at the receiving end should be same as it passed(name)
+                                        //if there is new name, then: {newname:passedname, newname:passedname};
 
   } catch (error) {
     throw new apiError(500, "Something went wrong while generating token")
@@ -192,7 +195,7 @@ const logoutUser=asyncHandler(async(req, res)=>{
   return res
   .status(200)
   .clearCookie("accessToken", options)
-  .clearCookie("refresh_token", options)
+  .clearCookie("refreshToken", options)
   .json( new apiResponse(200,{}, "User Logged out Successfully"))
 })
 
@@ -266,7 +269,7 @@ const updateAccountDetails=asyncHandler(async(req,res)=>{
   if(!fullname || !email){
     throw new apiError(400, "All fields are required");
   }
-  const user=User.findByIdAndUpdate(
+  const user=await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set:{
@@ -339,10 +342,11 @@ const getUserChannelProfile=asyncHandler(async(req, res)=>{
    if(!username?.trim()){
     throw new apiError(400, "username is required");
    }
+   const userId=req.user._id;
 
   //  User.findOne({username}); one possible way to get the user
 
-  //otherwise it is better way
+  //otherwise it is better way as mongoose provide to find and get module
   const channel= await User.aggregate([
     {
       $match: username
@@ -355,7 +359,7 @@ const getUserChannelProfile=asyncHandler(async(req, res)=>{
         localField:"_id",
         foreignField:"channel",
         as:"subscribers"
-      }
+      }// it searches like subscription.channel(ObjectId)===user._id(ObjectId)
     },{
       $lookup:{
         from:"subscriptions",  //mongoDB Stores key as plural of model name
@@ -374,12 +378,18 @@ const getUserChannelProfile=asyncHandler(async(req, res)=>{
         },
         isSubscribed:{
           $cond:{
-            if:{$in: [req.user?._id,"$subscribers.subscriber"]},
+            if:{$in: [new mongoose.Types.ObjectId(userId),
+              { $map: { input: "$subscribers", as: "s", in: "$$s.subscriber" } }]},//This checks: “Is the currently
+                                                            //logged-in user in the list of subscribers for this channel?”
               then: true,
               else: false
           }
         }
-        //This checks: “Is the currently logged-in user in the list of subscribers for this channel?”
+        // $in checks if a value exists inside an array of values.
+        // $in: [ value, arrayOfValues ]
+        //but here  we are searching for "$subscribers.subscriber" which iswrong bcz subscribers has array of {subscriber:ObjectId}
+        //and we are searching of objectId only. so it is an error. the array is not flattened.
+        //so we flatted the array and the array will be [objectId1, ObjectId2,...]        
       }
     },{
       $project:{
@@ -388,7 +398,7 @@ const getUserChannelProfile=asyncHandler(async(req, res)=>{
         subscriberCount:1,
         channelSubscribedToCount:1,
         isSubscribed:1,
-        avatat:1,
+        avatar:1,
         coverimage:1,
         email:1
       }
