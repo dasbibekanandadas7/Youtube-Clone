@@ -11,7 +11,8 @@ export const verifyJWT=asyncHandler(async(req, _, next)=>{
       throw new apiError(401, "Unauthorized request");
      }
   
-     const decodedToken=jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+     const decodedToken=jwt.verify(token, process.env.ACCESS_TOKEN_SECRET); // it will throw error if invalud token,
+                                                                  //   will not be null or undefined, simply throw error
     //  if(!decodedToken) {
     //   throw new apiError(401, "Invalid Token");
     //  }
