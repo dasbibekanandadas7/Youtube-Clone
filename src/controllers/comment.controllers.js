@@ -69,7 +69,7 @@ const getAllComments=asyncHandler(async(req,res)=>{
                 owner:{
                     username:1,
                     fullname:1,
-                    avatar:1
+                    "avatar.url":1
                 },
                 isLiked:1
             }

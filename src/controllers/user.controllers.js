@@ -86,8 +86,14 @@ const registerUser=asyncHandler(async (req,res) =>{
 
   const user= await User.create({
     fullname,
-    avatar:avatar.url,
-    coverimage:coverimage?.url || "",
+    avatar:{
+      url: avatar?.secure_url,
+      public_id: avatar?.public_id
+    },
+    coverimage:{
+      url:coverimage?.secure_url || "",
+      public_id: coverimage?.public_id || ""
+    },
     email,
     password,
     username:username.toLowerCase() 
@@ -292,7 +298,7 @@ const updateUserAvatar=asyncHandler(async(req,res)=>{
     throw new apiError(400, "avatar file is missing");
   } 
     const avatar=await uploadOnCloudinary(avatarlocalpath);
-    if(!avatar){
+    if(!avatar.url){
        throw new apiError(400, "avatar file upload failed");
     }
   
@@ -300,7 +306,10 @@ const updateUserAvatar=asyncHandler(async(req,res)=>{
      req.user._id,
      {
       $set:{
-        avatar: avatar.url}
+        avatar: {
+           public_id: avatar.public_id,
+           url: avatar.secure_url
+        }}
      },{
       new: true
      }
@@ -319,7 +328,7 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
     throw new apiError(400, "coverimage file is missing");
   } else {
     const coverimage=await uploadOnCloudinary(coverimagelocalpath);
-    if(!coverimage){
+    if(!coverimage.url){
        throw new apiError(400, "coverimage file upload failed");
     }
   }
@@ -327,7 +336,11 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
      req.user._id,
      {
       $set:{
-        coverimage: coverimage.url}
+        coverimage:{
+           public_id: coverimage.public_id,
+           url: coverimage.secure_url
+        }
+      }
      },{
       new: true
      }
