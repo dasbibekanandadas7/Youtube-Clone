@@ -8,7 +8,8 @@ import { asyncHandler } from "../utils/asyncHandler";
 
 const getAllComments=asyncHandler(async(req,res)=>{
     const {videoId}=req.params;
-    const {page=1, limit=10}=req.query;
+    const {page=1}=req.query; // frontend can only send page number
+    const limit=10;
 
     if(!isValidObjectId(videoId)){
         return new apiError(400, "Invalid videoID");
@@ -20,7 +21,7 @@ const getAllComments=asyncHandler(async(req,res)=>{
         return new apiError(400, "No video available");
     }
 
-    const videoComments=await Comment.aggregate([
+    const videoComments=Comment.aggregate([ // there is no Comment DB is involved yet. Just the blueprint is here
         {
             $match:{
                 video:new mongoose.Types.ObjectId(videoId)
@@ -51,7 +52,9 @@ const getAllComments=asyncHandler(async(req,res)=>{
                 isLiked:{
                     $cond:{
                         if:{
-                            $in:[req.user?._id, "likesoncomment.likedBy"]
+                            $in:[req.user?._id, 
+                                { $map: { input: "$likesoncomment", as: "l", in: "$$l.likedBy" } }
+                            ]
                         }
                     }
                 }
@@ -78,7 +81,7 @@ const getAllComments=asyncHandler(async(req,res)=>{
 
     const options={
         page:parseInt(page,10),
-        limit:parent(limit,10)
+        limit: 10
     }
     //If you only use limit = 5 without page, MongoDB will always return the first 5 items of your query/aggregation.
     // limit → controls how many items per page
@@ -92,7 +95,7 @@ const getAllComments=asyncHandler(async(req,res)=>{
     // aggregatePaginate is useful when you want to paginate results of an aggregation pipeline in MongoDB
     //Lookups / joins ($lookup),Computed fields ($addFields),Filtering with $match, Sorting with $sort, Grouping / aggregation ($group)
 
-    const comments=await Comment.aggregatePaginate(
+    const comments=await Comment.aggregatePaginate(// actual DB interaction happens here
         videoComments,
         options
     )

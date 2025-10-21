@@ -133,7 +133,7 @@ const userId = user._id;
           {
             $project:{
                  username: 1,
-                 avatar:1
+                 "avatar.url":1
             }// as it will give my all tweets, it will add my username and avatar for all tweets, saved in array
             //as: ownerDetails:[{username"Bibek",avatar:xyz.jpg},{username"Bibek",avatar:xyz.jpg}...]
           }

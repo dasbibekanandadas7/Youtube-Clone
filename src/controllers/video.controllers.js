@@ -180,7 +180,8 @@ const publishVideo=asyncHandler(async(req,res)=>{
 
 // get all videos based on query, sort, pagination
 const getAllVideos=asyncHandler(async(req,res)=>{
-    const {page=1, limit=10, query, sortBy, sortType,userId}=req.query;
+    const {page=1, query, sortBy, sortType,userId}=req.query;
+    const limit=10
 
     const pipeline=[];
 
@@ -202,7 +203,7 @@ const getAllVideos=asyncHandler(async(req,res)=>{
         }
 
         pipeline.push({
-            $match:new mongoose.Types.ObjectId(userId)
+            $match:{owner: new mongoose.Types.ObjectId(userId)}
         })
     }
 
@@ -216,10 +217,10 @@ const getAllVideos=asyncHandler(async(req,res)=>{
     //sortBy can be views, createdAt, duration
     //sortType can be ascending(-1) or descending(1)
 
-    if(sort && sortType){
+    if(sortBy && sortType){
        pipeline.push({
         $sort:{
-            [sortBy]:sortType==="asc"?-1:1
+            [sortBy]:sortType==="desc"?-1:1
         }
        })
     }
@@ -252,7 +253,7 @@ const getAllVideos=asyncHandler(async(req,res)=>{
     })
 
 
-    const videoAggregate=await Video.aggregate(pipeline)
+    const videoAggregate=Video.aggregate(pipeline)
 
     const options={
         page:parseInt(page, 10),
@@ -262,7 +263,7 @@ const getAllVideos=asyncHandler(async(req,res)=>{
     const video=await Video.aggregatePaginate(videoAggregate, options)
 
     return res.status(200)
-    .json(200,video, "All video fetched Successfully")
+    .json(new apiResponse(200,video, "All video fetched Successfully"))
 
 })
 

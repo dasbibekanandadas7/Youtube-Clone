@@ -7,7 +7,7 @@ import {Like} from "../models/like.models.js";
 import {Video} from "../models/video.models.js";
 import {Tweet} from "../models/tweet.models.js"
 
-const videolikeToggle=asyncHandler(async(req,res)=>{
+const videoLikeToggle=asyncHandler(async(req,res)=>{
     const {videoId}=req.params;
 
     if(!isValidObjectId(videoId)){
@@ -83,7 +83,7 @@ const commentLikeToggle=asyncHandler(async(req,res)=>{
 })
 
 
-const tweetLiketoggle=asyncHandler(async(req,res)=>{
+const tweetLikeToggle=asyncHandler(async(req,res)=>{
     const {tweetId}=req.params;
 
     if(!isValidObjectId(tweetId)){
@@ -187,7 +187,7 @@ const getAllLikedVideos=asyncHandler(async(req,res)=>{
 
 export {
     commentLikeToggle,
-    videolikeToggle,
-    tweetLiketoggle,
+    videoLikeToggle,
+    tweetLikeToggle,
     getAllLikedVideos
 }
